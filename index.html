@@ -151,7 +151,9 @@ function makeSpecimen(variant){
  for(var i=0;i<N*N;i++){
   var iy=(i/N)|0, ix=i%N;
   var gray=(.2126*data[i*4]+.7152*data[i*4+1]+.0722*data[i*4+2])/255;
-  var dither=.030*Math.sin(ix*1.73+iy*.41)+.022*Math.sin(ix*.71-iy*2.18)+.012*Math.sin(ix*2.73+iy*2.47);
+  var hash=Math.sin((ix+13)*127.1+(iy+3)*311.7)*43758.5453;
+  var grain=.065*(hash-Math.floor(hash)-.5);
+  var dither=.030*Math.sin(ix*1.73+iy*.41)+.022*Math.sin(ix*.71-iy*2.18)+.012*Math.sin(ix*2.73+iy*2.47)+grain;
   out[i]=gray-.5+dither;
  }
  return out;
@@ -257,7 +259,7 @@ function redraw(){
 }
 function updatePairStatus(){el("pairStatus").textContent=S.synthetic?"Built-in mystery pair. Hidden rule generated in floating point.":S.sourceName+" → "+S.targetName+" (imported, center-cropped to 128×128)";}
 function makeDemo(){
- stop();S.synthetic=true;S.revealed=false;S.truth=mysteryCurves[+el("mystery").value].slice();
+ stop();S.synthetic=true;S.revealed=false;el("reveal").textContent="Reveal hidden EQ";S.truth=mysteryCurves[+el("mystery").value].slice();
  S.source=makeSpecimen(0);
  S.target=E.forward(S.source,N,S.truth,S.passes,S.alpha);
  S.sourceName="Built-in specimen";S.targetName="Mystery filtered";
