@@ -344,7 +344,8 @@ function redraw(){
     faint?"Most visible structure has faded. ":"Signal remains visibly substantial. ")+
   "Target has "+pct.toPrecision(3)+"% of the original's RMS contrast after "+S.passes+" pass"+(S.passes===1?"":"es")+". "+
   (gain>1.01?"Shown at "+gain.toFixed(gain>10?0:1)+"× boosted contrast so you can inspect what survived. ":"")+
-  "A correct filter replay may look blank when the true output is blank. This is not recovery of the missing face.";
+  "A correct filter replay may look blank when the true output is blank. This is not recovery of the missing face."+
+  (!S.synthetic&&targetContrast<1/255?" WARNING: imported target contrast is below one 8-bit intensity step; its original spectral gains may have been destroyed by image quantization. This inverse is not identifiable from these pixels alone.":"");
  drawEq(curve);drawSupport();
  // The four images above update for each probe; timeline is heavier, so
  // refresh every fifth animated probe and on completion.
