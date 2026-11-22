@@ -15,6 +15,22 @@ Open **[index.html](index.html)** locally in your browser (with solver.js in the
 5. Click **Test on unseen image**. A different generated image is processed through the real hidden filter and the learned filter. This is the generalization control; matching only the training picture is not enough.
 6. Use **Load original** and **Load changed** to try aligned photos from your own Sigh loop. Set the *known* number of passes and alpha before seeking. Those two values generally cannot be deduced from one pair. For imported pairs, a close fit does not uniquely identify the transformation.
 
+## Seeing what actually happened
+
+The first version confused a correct inverse calculation with a visibly useful demonstration. A high-pass EQ repeated four times can leave an almost-flat gray output, even when the seeker has recovered the hidden ten gains exactly. Moreover the old residue color map drew zero error in green and printed small errors as "0.0000", which was misleading.
+
+The revised instrument therefore:
+
+- Starts from a more visible band-pass demonstration at two passes.
+- Shows a **survival-of-contrast** reading to make the fading obvious.
+- Uses the **same optional display-only contrast boost** for the changed picture and its replay. The solver always fits the actual unboosted floating-point arrays.
+- Draws **exactly zero residue dark**, with red/blue tied to the initial difference rather than renormalizing current numerical noise.
+- Reports tiny errors in scientific notation and compares discovered versus hidden gains numerically after Reveal.
+- Provides an **inferred forward Sigh movie**: input at generation 0 and the filter's predicted states after subsequent passes. This is a replay, not independent observations.
+- Never pairs a newly imported image with an old synthetic image; both imported halves must be loaded.
+
+IMPORTANT: Enhancement is a *viewing aid*, not lost-information recovery. With a real 8-bit output flattened to uniform gray, the missing frequencies cannot be re-identified merely by amplifying the pixels. The built-in mystery internally retains floating point data, which is why tiny gains can still be inferred. Repeated filters with large attenuation may be impossible to infer from ordinary saved before/after PNG files, and the app should signal model limitations rather than claim otherwise.
+
 The app runs on 128×128 centered grayscale arrays; uploaded images are center-cropped independently to square. Compare only images already aligned, with no brightness/contrast changes or resizing between them beyond identical preprocessing. The synthetic target stays in floating point; clipping occurs only for visualization.
 
 ## Exact original Sigh convention
