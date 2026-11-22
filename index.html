@@ -37,6 +37,11 @@ button.primary{background:#167b71;border-color:#39b6a4;color:white}button.primar
 .tile canvas{display:block;width:100%;aspect-ratio:1;image-rendering:pixelated;border-radius:5px;background:#070d12}
 .tile .hint{font-size:11px;color:var(--soft);padding-top:7px;min-height:28px}
 .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.timeline .moment{display:flex;align-items:center;gap:9px;border:1px solid #30485b;border-radius:9px;background:#0a1826;padding:7px;min-width:0}
+.timeline canvas{width:62px;height:62px;image-rendering:pixelated;border-radius:4px}
+.timeline span{font:12px/1.4 system-ui;color:#b5c9d9}
+@media(max-width:650px){.timeline{grid-template-columns:repeat(2,1fr)}}
 .metric{border:1px solid var(--line);border-radius:10px;padding:10px;background:#101f31}
 .metric .value{font:700 21px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:3px}
 .metric .name{font-size:11px;color:var(--soft)}
@@ -100,11 +105,17 @@ button.primary{background:#167b71;border-color:#39b6a4;color:white}button.primar
    <div class="metric"><div class="name">Held-out frequency error</div><div class="value" id="heldout">—</div></div>
   </div>
   <div class="notice" id="survivalMessage" style="margin:0 0 14px">Image signal survival will appear here.</div>
+  <div class="panel" style="margin-bottom:14px">
+   <h2>The replay as a Sigh movie <span class="small">— the seeker’s current filter, run forward</span></h2>
+   <p class="small">These are inferred intermediate frames, not extra measurements. The same filter is run 0, 1, 2… times to show how the image disappears. Faithful brightness, never contrast-boosted.</p>
+   <div class="timeline" id="timeline"></div>
+  </div>
   <div class="panel eqpanel">
    <div>
     <h2>Discovered EQ <span class="small">— exact original Sigh k² convention</span></h2>
     <canvas id="eqChart" class="graph" width="740" height="290"></canvas>
     <div class="legend"><span><i class="swatch" style="background:#5ee1bd"></i>Seeker's curve</span><span><i class="swatch" style="background:#f6be69"></i>Hidden EQ (only after reveal)</span></div>
+    <p class="small" id="truthStatus">The real mystery EQ remains hidden until you click Reveal.</p>
     <p class="small">Low spatial frequency → Nyquist corner. The x-axis is normalized squared frequency, not linear wavelength. Gray areas lack enough evidence.</p>
     <h3 style="margin:13px 0 5px">Which bands can the original image tell us about?</h3>
     <canvas id="supportChart" class="graph" width="740" height="150"></canvas>
@@ -264,6 +275,21 @@ function drawSupport(){
  }
  ctx.fillStyle="#93acbe";ctx.font="12px monospace";ctx.fillText("evidence ∝ spectral energy (relative display)",14,17);
 }
+function renderTimeline(curve){
+ var box=el("timeline");box.textContent="";
+ var steps=[0,1,Math.max(1,Math.floor(S.passes/2)),S.passes];
+ steps=Array.from(new Set(steps)).sort(function(a,b){return a-b;});
+ for(var n=0;n<steps.length;n++){
+  var step=steps[n],tile=document.createElement("div");tile.className="moment";
+  var canvas=document.createElement("canvas");canvas.width=canvas.height=N;
+  canvas.id="timelineFrame"+n;tile.appendChild(canvas);
+  var label=document.createElement("span");
+  label.textContent=step===0?"Generation 0 · original":"Generation "+step+" · filtered";
+  tile.appendChild(label);box.appendChild(tile);
+  var data=step===0?S.source:E.forward(S.source,N,curve,step,S.alpha);
+  imagePaint(canvas.id,data,false,1);
+ }
+}
 function redraw(){
  if(!S.source||!S.target)return;
  var curve=getCurrentCurve(),predicted=E.forward(S.source,N,curve,S.passes,S.alpha);
@@ -296,6 +322,19 @@ function redraw(){
   (gain>1.01?"Shown at "+gain.toFixed(gain>10?0:1)+"× boosted contrast so you can inspect what survived. ":"")+
   "A correct filter replay may look blank when the true output is blank. This is not recovery of the missing face.";
  drawEq(curve);drawSupport();
+ // The four images above update for each probe; timeline is heavier, so
+ // refresh every fifth animated probe and on completion.
+ if(!S.fit || !S.position || S.position%5===0 ||
+     S.position===S.fit.history.length-1)renderTimeline(curve);
+ if(S.revealed&&S.truth&&S.fit){
+  var max=0,mean=0;
+  for(var bi=0;bi<10;bi++){var delta=Math.abs(curve[bi]-S.truth[bi]);max=Math.max(max,delta);mean+=delta;}
+  el("truthStatus").textContent="Hidden vs recovered EQ: worst band differs by "+max.toPrecision(3)+
+    "; mean band error "+(mean/10).toPrecision(3)+". A close curve is evidence the inverse identified the generated law.";
+ }else{
+  el("truthStatus").textContent=S.revealed?"Hidden EQ shown in gold. Seek to compare it against the turquoise recovery.":
+    "The real mystery EQ remains hidden until you click Reveal.";
+ }
  var log=el("trace");
  if(!S.fit){
   log.textContent="No probes yet. The null rule says: B = A.";
@@ -347,7 +386,7 @@ function changeAssumptions(){
 el("makeDemo").onclick=makeDemo;
 el("mystery").onchange=makeDemo;
 el("viewMode").onchange=function(){S.displayEnhanced=el("viewMode").value==="enhanced";redraw();};
-el("reveal").onclick=function(){if(!S.synthetic||!S.truth){setStatus("Only the built-in mystery has a known hidden answer.");return;}S.revealed=!S.revealed;el("reveal").textContent=S.revealed?"Hide answer":"Reveal hidden EQ";drawEq(getCurrentCurve());};
+el("reveal").onclick=function(){if(!S.synthetic||!S.truth){setStatus("Only the built-in mystery has a known hidden answer.");return;}S.revealed=!S.revealed;el("reveal").textContent=S.revealed?"Hide answer":"Reveal hidden EQ";redraw();};
 el("beforeFile").onchange=function(e){loadImage(e.target.files[0],"source");};
 el("afterFile").onchange=function(e){loadImage(e.target.files[0],"target");};
 el("passes").oninput=changeAssumptions;
