@@ -147,6 +147,19 @@ function makeSpecimen(variant){
  x.strokeStyle="#ffd78a";x.lineWidth=1.3;for(var j=0;j<7;j++){x.beginPath();x.moveTo(0,5+j*19);x.lineTo(N,11+j*17);x.stroke();}
  x.font="bold 13px sans-serif";x.fillStyle="#fff";x.fillText(variant?"NEW":"SIGH",8,17);
  x.fillStyle="#092e3f";x.fillRect(94,95,32,30);x.fillStyle="#c1dfcf";for(var row=0;row<5;row++)for(var col=0;col<5;col++)if((row+col)%2)x.fillRect(95+col*6,96+row*6,6,6);
+ if(variant){
+  // Independent transfer scene: do not reuse the training face with only a new caption.
+  var other=x.createLinearGradient(0,0,N,N);
+  other.addColorStop(0,"#102e43");other.addColorStop(.52,"#bbc5af");other.addColorStop(1,"#68444b");
+  x.fillStyle=other;x.fillRect(0,0,N,N);
+  x.fillStyle="#e1ae64";x.beginPath();x.arc(100,29,18,0,Math.PI*2);x.fill();
+  x.fillStyle="#20495b";x.beginPath();x.moveTo(0,81);x.lineTo(28,35);x.lineTo(63,85);x.lineTo(93,57);x.lineTo(128,102);x.lineTo(128,128);x.lineTo(0,128);x.closePath();x.fill();
+  x.strokeStyle="#dae9e1";x.lineWidth=2;
+  for(var k=0;k<9;k++){x.beginPath();x.moveTo(0,12*k+5);x.lineTo(N,12*k+40);x.stroke();}
+  x.fillStyle="#f7e6ce";x.fillRect(12,89,37,27);
+  x.fillStyle="#234055";for(var y2=0;y2<4;y2++)for(var x2=0;x2<5;x2++)if((x2+y2)%2===0)x.fillRect(14+x2*7,91+y2*6,7,6);
+  x.fillStyle="#f7e6ce";x.font="bold 15px sans-serif";x.fillText("TEST 2",10,24);
+ }
  var data=x.getImageData(0,0,N,N).data, out=new Float64Array(N*N);
  for(var i=0;i<N*N;i++){
   var iy=(i/N)|0, ix=i%N;
