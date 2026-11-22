@@ -88,7 +88,7 @@ button.primary{background:#167b71;border-color:#39b6a4;color:white}button.primar
   <div class="buttonrow"><button class="secondary" id="finish">Finish immediately</button><button class="secondary" id="reset">Reset seeker</button></div>
   <div id="status" class="status" role="status" aria-live="polite">Ready: the seeker knows nothing.</div>
   <div class="notice">Watch the red residue. The seeker starts with a flat EQ (gain = 1). Each probe changes the band that best explains the remaining difference.</div>
-  <div class="buttonrow"><button id="transfer">Test on unseen image</button><button id="download">Save reconstructed PNG</button></div>
+  <div class="buttonrow"><button id="transfer">Test on unseen image</button><button id="download">Save displayed reconstruction</button></div>
   <p id="transferStatus" class="small">Transfer test is available for built-in mystery pairs.</p>
  </aside>
  <section>
@@ -197,15 +197,39 @@ function loadImage(file,which){
    cx.drawImage(img,(img.naturalWidth-size)/2,(img.naturalHeight-size)/2,size,size,0,0,N,N);
    var px=cx.getImageData(0,0,N,N).data, a=new Float64Array(N*N);
    for(var i=0;i<a.length;i++)a[i]=(.2126*px[4*i]+.7152*px[4*i+1]+.0722*px[4*i+2])/255-.5;
-   stop();S.synthetic=false;S.truth=null;S.revealed=false;
+   stop();
+   // Do not combine an imported picture with the old synthetic mystery.
+   if(S.synthetic){if(which==="source")S.target=null;else S.source=null;}
+   S.synthetic=false;S.truth=null;S.revealed=false;
+   el("reveal").textContent="Reveal hidden EQ";
    if(which==="source"){S.source=a;S.sourceName=file.name;}else{S.target=a;S.targetName=file.name;}
-   clearFit(); updatePairStatus(); redraw();
-   setStatus("Loaded "+file.name+". Supply both aligned images, then Seek EQ.");
+   clearFit();updatePairStatus();
+   if(S.source&&S.target){
+    redraw();setStatus("Both images loaded. Seek EQ to test the assumed filter.");
+   }else{
+    showIncompletePair();
+    setStatus("Loaded "+file.name+". Please load the "+(which==="source"?"changed":"original")+" image too.");
+   }
   };
   img.onerror=function(){setStatus("Could not decode this image.");};
   img.src=ev.target.result;
  };
  reader.readAsDataURL(file);
+}
+function showIncompletePair(){
+ for(var id of ["sourceCanvas","targetCanvas","replayCanvas","residueCanvas"]){
+  var c=el(id),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);
+  if((id==="sourceCanvas"&&S.source)||(id==="targetCanvas"&&S.target))
+   imagePaint(id,id==="sourceCanvas"?S.source:S.target,false,1);
+ }
+ for(var metric of ["initialErr","currentErr","explained","heldout"])el(metric).textContent="—";
+ el("timeline").textContent="";
+ el("trace").textContent="Need both aligned images before the inverse search can begin.";
+ el("audit").textContent="An original and its transformed image must both be supplied.";
+ el("survivalMessage").textContent="Waiting for the second image.";
+ el("boostStatus").textContent="Display enhancement does not alter the input data.";
+ el("truthStatus").textContent="No hidden synthetic ground-truth filter for imported images.";
+ drawEq(Array(10).fill(1));drawSupport();
 }
 function setStatus(t){el("status").textContent=t;}
 function stop(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
@@ -355,7 +379,7 @@ function redraw(){
  more+="Held-out error measures fit to withheld frequencies, NOT transfer to an independent image.";
  el("audit").textContent=more;
 }
-function updatePairStatus(){el("pairStatus").textContent=S.synthetic?"Built-in mystery pair. Hidden rule generated in floating point.":S.sourceName+" → "+S.targetName+" (imported, center-cropped to 128×128)";}
+function updatePairStatus(){el("pairStatus").textContent=S.synthetic?"Built-in mystery pair. Hidden rule generated in floating point.":(S.source?S.sourceName:"[original not loaded]")+" → "+(S.target?S.targetName:"[changed not loaded]")+" (center-cropped to 128×128)";}
 function makeDemo(){
  stop();S.synthetic=true;S.revealed=false;el("reveal").textContent="Reveal hidden EQ";S.truth=mysteryCurves[+el("mystery").value].slice();
  S.source=makeSpecimen(0);
@@ -403,9 +427,12 @@ el("transfer").onclick=function(){
  el("transferStatus").textContent="Independent second picture: RMSE "+err.toFixed(5)+" vs unchanged baseline "+base.toFixed(5)+". "+(base?((1-err/base)*100).toFixed(1)+"% difference explained.":"");
 };
 el("download").onclick=function(){
- var curve=getCurrentCurve(),pred=E.forward(S.source,N,curve,S.passes,S.alpha);
- imagePaint("replayCanvas",pred,false);
- var a=document.createElement("a");a.download="sigh-image-inverse-replay.png";a.href=el("replayCanvas").toDataURL("image/png");a.click();
+ if(!S.source||!S.target){setStatus("Load both images before exporting.");return;}
+ // Save exactly the visible replay, so boosted images do not silently
+ // become gray when downloaded.
+ var a=document.createElement("a");
+ a.download="sigh-image-inverse-replay"+(S.displayEnhanced?"-display-boosted":"-faithful")+".png";
+ a.href=el("replayCanvas").toDataURL("image/png");a.click();
 };
 makeDemo();
 })();
