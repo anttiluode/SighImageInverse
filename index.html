@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b1421">
+<title>Sigh Image Inverse — the image teaches the EQ</title>
+<style>
+:root { color-scheme:dark; --bg:#0a1420;--panel:#132234;--panel2:#182b40;--line:#2c4259;--text:#e8f1fa;--soft:#9bb0c5;--teal:#5ee1bd;--gold:#f6be69;--red:#f58c9a; }
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 18% 0%,#18304a 0%,transparent 38%),var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:1300px;margin:auto;padding:25px 20px 65px}
+header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.eyebrow{font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:2.4px;font-weight:800}
+h1{font-size:clamp(29px,4vw,52px);line-height:1.05;letter-spacing:-1.9px;margin:9px 0}
+.sub{max-width:740px;color:#bed0e1;font-size:16px;margin:10px 0 22px}
+header a{color:var(--teal);text-decoration:none;border:1px solid #3b6a73;border-radius:18px;padding:7px 12px;font-size:13px}
+h2{font-size:19px;margin:0 0 12px;letter-spacing:-.4px}
+h3{font-size:13px;letter-spacing:.3px;margin:0;color:var(--soft)}
+a{color:var(--teal)} p{margin:8px 0}
+.panel{background:linear-gradient(130deg,#142538,#101d2e);border:1px solid var(--line);border-radius:17px;padding:17px;box-shadow:0 8px 36px #0002}
+.layout{display:grid;grid-template-columns: minmax(265px,320px) 1fr;gap:17px;align-items:start}
+.controls{position:sticky;top:14px}
+.field{margin:16px 0 6px}.field label{display:flex;justify-content:space-between;gap:10px;color:var(--soft);font-size:13px}
+select,input[type=range]{width:100%;margin-top:7px} select{border:1px solid var(--line);color:var(--text);background:#0b1726;border-radius:8px;padding:9px}
+input[type=range]{accent-color:var(--teal)} input[type=file]{display:none}
+button,.file-button{appearance:none;cursor:pointer;border:1px solid #43627a;border-radius:9px;padding:10px 12px;background:#1b3045;color:var(--text);font:600 13px system-ui;display:inline-block;text-align:center}
+button:hover,.file-button:hover{background:#24425c;border-color:#72a9c4}
+button:focus-visible,.file-button:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+button.primary{background:#167b71;border-color:#39b6a4;color:white}button.primary:hover{background:#1b9284}button.secondary{background:transparent}button:disabled{cursor:not-allowed;opacity:.46}
+.buttonrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.buttonrow>*{flex:1}
+.small{font-size:12px;color:var(--soft)}
+.tag{display:inline-block;font:700 11px system-ui;letter-spacing:.6px;color:#083329;background:var(--teal);padding:5px 9px;border-radius:30px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.tile{background:#0a1826;border:1px solid #274158;border-radius:12px;overflow:hidden;padding:8px}
+.tile .top{display:flex;justify-content:space-between;gap:5px;margin-bottom:8px;color:#bfd4e5;font:700 11px system-ui}
+.tile canvas{display:block;width:100%;aspect-ratio:1;image-rendering:pixelated;border-radius:5px;background:#070d12}
+.tile .hint{font-size:11px;color:var(--soft);padding-top:7px;min-height:28px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.metric{border:1px solid var(--line);border-radius:10px;padding:10px;background:#101f31}
+.metric .value{font:700 21px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;margin-top:3px}
+.metric .name{font-size:11px;color:var(--soft)}
+.metric.highlight{border-color:#277a6e}
+.eqpanel{display:grid;grid-template-columns:1.4fr 1fr;gap:15px}
+.graph{display:block;width:100%;height:244px;background:#071726;border-radius:9px}
+#supportChart{height:125px}
+.legend{display:flex;flex-wrap:wrap;gap:17px;margin-top:9px;font-size:12px;color:var(--soft)}
+.swatch{display:inline-block;width:13px;height:3px;vertical-align:middle;margin-right:5px}
+.trace{min-height:93px;max-height:178px;overflow:auto;font:12px/1.7 ui-monospace,Consolas,monospace;color:#c8d9e6;padding:9px;background:#081525;border-radius:9px;border:1px solid #253a4e}
+.notice{padding:12px;border-radius:9px;background:#142e3b;color:#cae2eb;font-size:13px;border-left:3px solid var(--teal)}
+.footer{margin-top:18px;font-size:12px;color:var(--soft)}
+.status{font-size:13px;color:var(--gold);min-height:24px;font-weight:650}
+.details{margin-top:15px;color:#b0c4d7;font-size:13px}
+.details summary{cursor:pointer;color:var(--teal)}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}.controls{position:static}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.metrics{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:550px){.eqpanel{grid-template-columns:1fr}.grid4{gap:7px}.tile{padding:5px}.tile .hint{font-size:10px} main{padding:16px 10px 40px}.panel{padding:12px}.metric .value{font-size:18px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+ <div><div class="eyebrow">A Sigh / Sihti / Luotain experiment</div>
+ <h1>Sigh Image <span style="color:var(--teal)">Inverse</span></h1></div>
+ <a href="https://github.com/anttiluode/SighImageInverse" target="_blank" rel="noopener">View source on GitHub ↗</a>
+</header>
+<p class="sub">Two pictures. One unknown operator. The image supplies the frequencies; the seeker follows the residue until it finds the EQ that changed them. Then the recovered filter can run forward on a different picture.</p>
+<div class="layout">
+ <aside class="panel controls">
+  <div class="tag">01 / Make or load evidence</div>
+  <p class="small" style="margin-top:12px">Try a hidden filter, or load aligned <b>before</b> and <b>after</b> images from your own Sigh loop. Everything runs locally in your browser.</p>
+  <div class="field"><label for="mystery">Hidden EQ for built-in experiment</label><select id="mystery"><option value="0">Mystery A — unexpected law</option><option value="1">Mystery B — another law</option><option value="2">Mystery C — another law</option></select></div>
+  <div class="buttonrow"><button id="makeDemo">Generate transformed picture</button><button class="secondary" id="reveal">Reveal hidden EQ</button></div>
+  <div class="buttonrow"><label class="file-button" for="beforeFile">Load original</label><input id="beforeFile" type="file" accept="image/*"><label class="file-button" for="afterFile">Load changed</label><input id="afterFile" type="file" accept="image/*"></div>
+  <p id="pairStatus" class="small">Built-in synthetic pair; original 128 × 128 sample.</p>
+  <div class="field"><label for="passes">Number of Sigh passes <strong id="passesVal">4</strong></label><input id="passes" type="range" min="1" max="18" value="4" step="1"></div>
+  <div class="field"><label for="alpha">Fresh-image feedback α <strong id="alphaVal">0.000</strong></label><input id="alpha" type="range" min="0" max="0.6" value="0" step="0.025"></div>
+  <p class="small">For uploaded pairs these are <b>assumptions you supply</b>. A single before/after pair cannot generally identify the EQ, pass count and α independently.</p>
+  <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
+  <div class="tag">02 / Send the seeker</div>
+  <div class="buttonrow"><button class="primary" id="seek">▶ Seek EQ</button><button id="step">One probe</button></div>
+  <div class="buttonrow"><button class="secondary" id="finish">Finish immediately</button><button class="secondary" id="reset">Reset seeker</button></div>
+  <div id="status" class="status" role="status" aria-live="polite">Ready: the seeker knows nothing.</div>
+  <div class="notice">Watch the red residue. The seeker starts with a flat EQ (gain = 1). Each probe changes the band that best explains the remaining difference.</div>
+  <div class="buttonrow"><button id="transfer">Test on unseen image</button><button id="download">Save reconstructed PNG</button></div>
+  <p id="transferStatus" class="small">Transfer test is available for built-in mystery pairs.</p>
+ </aside>
+ <section>
+  <div class="grid4">
+   <div class="tile"><div class="top"><span>INPUT · before</span><span style="color:var(--teal)">A</span></div><canvas id="sourceCanvas" width="128" height="128"></canvas><div class="hint">Original image / source of probes</div></div>
+   <div class="tile"><div class="top"><span>OUTPUT · after</span><span style="color:var(--gold)">B</span></div><canvas id="targetCanvas" width="128" height="128"></canvas><div class="hint">Unknown processing has happened</div></div>
+   <div class="tile"><div class="top"><span>REPLAY · A through guessed EQ</span></div><canvas id="replayCanvas" width="128" height="128"></canvas><div class="hint">Prediction after current rule</div></div>
+   <div class="tile"><div class="top"><span>RESIDUE · B − prediction</span><span style="color:var(--red)">Δ</span></div><canvas id="residueCanvas" width="128" height="128"></canvas><div class="hint">Warm = too low, blue = too high</div></div>
+  </div>
+  <div class="metrics">
+   <div class="metric"><div class="name">Pixels / initial difference</div><div class="value" id="initialErr">—</div></div>
+   <div class="metric highlight"><div class="name">Pixels / current RMSE</div><div class="value" id="currentErr">—</div></div>
+   <div class="metric"><div class="name">Difference explained</div><div class="value" id="explained">—</div></div>
+   <div class="metric"><div class="name">Held-out frequencies / fit error</div><div class="value" id="heldout">—</div></div>
+  </div>
+  <div class="panel eqpanel">
+   <div>
+    <h2>Discovered EQ <span class="small">— exact original Sigh k² convention</span></h2>
+    <canvas id="eqChart" class="graph" width="740" height="290"></canvas>
+    <div class="legend"><span><i class="swatch" style="background:#5ee1bd"></i>Seeker's curve</span><span><i class="swatch" style="background:#f6be69"></i>Hidden EQ (only after reveal)</span></div>
+    <p class="small">Low spatial frequency → Nyquist corner. The x-axis is normalized squared frequency, not linear wavelength. Gray areas lack enough evidence.</p>
+    <h3 style="margin:13px 0 5px">Which bands can the original image tell us about?</h3>
+    <canvas id="supportChart" class="graph" width="740" height="150"></canvas>
+   </div>
+   <div>
+    <h2>Live probe log</h2>
+    <div id="trace" class="trace">No probes yet. The null rule says: B = A.</div>
+    <p class="small" style="margin-top:12px">The seeker uses the Fourier cross-relation to propose a gain, then greedily adjusts one of Sigh's ten EQ controls at a time. It checks the curve on Fourier bins withheld from fitting.</p>
+    <div id="audit" class="notice" style="margin-top:12px">A good fit does not establish that the real image was made by this filter. Only a held-out image, or a known-generated mystery, tests that claim.</div>
+   </div>
+  </div>
+ </section>
+</div>
+<details class="panel details"><summary>How inverse Sigh actually works (and what it cannot know)</summary>
+<p>Sigh forward: <code>x(n+1)=α x(original)+(1−α) F_EQ[x(n)]</code>. For each Fourier mode the same real gain <code>g</code> is applied, so its transfer after the stated number of passes obeys <code>h(n+1)=α+(1−α) g h(n)</code>, <code>h(0)=1</code>. The inverse estimates the effective transfer from aligned source and target Fourier coefficients, inverts that scalar recurrence, then searches for ten control values whose interpolated curve agrees with the evidence.</p>
+<p>For a single pair, no signal at a frequency means no knowledge of the gain there. High pass counts can make several different gains indistinguishable. Phase changes, clipping, shifting, resizing, nonlinear edge-aware filters, noise and incorrect α/pass assumptions violate this ten-band model. An arbitrary changed picture is <b>not</b> evidence for a unique EQ. Images are converted to 128×128 centered grayscale; imported pairs must already be aligned. The synthetic target is computed in floating point (no hidden JPEG clipping), while display images are clamped only for viewing.</p>
+<p>Unlike Luotain2's general spatial-term grammar, this is a deliberately constrained ten-band inverse problem. The residue-guided search is real, but this is <b>not</b> a claim that the system discovers arbitrary physics.</p>
+</details>
+<div class="footer">SighImageInverse · based on <a href="https://github.com/anttiluode/SighImageSuper">SighImageSuper</a> and the residue-guided question of <a href="https://github.com/anttiluode/Luotain2">Luotain2</a> · all images stay on your computer · no CDN, server, GPU or AI model required</div>
+</main>
+<script src="./solver.js"></script>
+<script>
+(function(){
+"use strict";
+var N=128, E=window.SighInverse;
+if(!E){document.getElementById("status").textContent="The numerical solver did not load.";return;}
+var el=function(id){return document.getElementById(id);};
+var mysteryCurves=[
+ [0.10,0.29,0.70,0.96,1.00,0.95,0.78,0.46,0.22,0.09],
+ [0.04,0.08,0.15,0.21,0.34,0.51,0.70,0.84,0.96,1.00],
+ [1.00,0.96,0.87,0.54,0.16,0.13,0.49,0.85,0.96,0.99]
+];
+var S={source:null,target:null,truth:null,synthetic:true,revealed:false,prep:null,fit:null,position:0,timer:null,passes:4,alpha:0,sourceName:"Built-in specimen",targetName:"Generated EQ"};
+function makeSpecimen(variant){
+ var c=document.createElement("canvas");c.width=N;c.height=N;var x=c.getContext("2d");
+ var sky=x.createLinearGradient(0,0,N,N);sky.addColorStop(0,"#b3c6cf");sky.addColorStop(.5,"#455e74");sky.addColorStop(1,"#27374e");x.fillStyle=sky;x.fillRect(0,0,N,N);
+ x.fillStyle="#d9b6a0";x.beginPath();x.ellipse(61,65,37,51,-.10,0,Math.PI*2);x.fill();
+ x.fillStyle="#364959";x.beginPath();x.ellipse(61,29,41,27,.1,Math.PI,Math.PI*2);x.fill();
+ x.fillStyle="#f0e4d5";x.beginPath();x.ellipse(46,62,8,5,0,0,Math.PI*2);x.ellipse(78,62,8,5,0,0,Math.PI*2);x.fill();
+ x.fillStyle="#25384e";x.beginPath();x.arc(48,62,3.2,0,Math.PI*2);x.arc(77,62,3.2,0,Math.PI*2);x.fill();
+ x.strokeStyle="#804b51";x.lineWidth=2;x.beginPath();x.moveTo(61,68);x.lineTo(58,82);x.lineTo(65,82);x.stroke();
+ x.beginPath();x.moveTo(49,94);x.quadraticCurveTo(63,104,80,93);x.stroke();
+ x.strokeStyle="#ffd78a";x.lineWidth=1.3;for(var j=0;j<7;j++){x.beginPath();x.moveTo(0,5+j*19);x.lineTo(N,11+j*17);x.stroke();}
+ x.font="bold 13px sans-serif";x.fillStyle="#fff";x.fillText(variant?"NEW":"SIGH",8,17);
+ x.fillStyle="#092e3f";x.fillRect(94,95,32,30);x.fillStyle="#c1dfcf";for(var row=0;row<5;row++)for(var col=0;col<5;col++)if((row+col)%2)x.fillRect(95+col*6,96+row*6,6,6);
+ var data=x.getImageData(0,0,N,N).data, out=new Float64Array(N*N);
+ for(var i=0;i<N*N;i++){
+  var iy=(i/N)|0, ix=i%N;
+  var gray=(.2126*data[i*4]+.7152*data[i*4+1]+.0722*data[i*4+2])/255;
+  var dither=.030*Math.sin(ix*1.73+iy*.41)+.022*Math.sin(ix*.71-iy*2.18)+.012*Math.sin(ix*2.73+iy*2.47);
+  out[i]=gray-.5+dither;
+ }
+ return out;
+}
+function loadImage(file,which){
+ if(!file)return;
+ var reader=new FileReader();
+ reader.onload=function(ev){
+  var img=new Image();
+  img.onload=function(){
+   var c=document.createElement("canvas");c.width=c.height=N;
+   var cx=c.getContext("2d",{willReadFrequently:true});
+   var size=Math.min(img.naturalWidth,img.naturalHeight);
+   cx.drawImage(img,(img.naturalWidth-size)/2,(img.naturalHeight-size)/2,size,size,0,0,N,N);
+   var px=cx.getImageData(0,0,N,N).data, a=new Float64Array(N*N);
+   for(var i=0;i<a.length;i++)a[i]=(.2126*px[4*i]+.7152*px[4*i+1]+.0722*px[4*i+2])/255-.5;
+   stop();S.synthetic=false;S.truth=null;S.revealed=false;
+   if(which==="source"){S.source=a;S.sourceName=file.name;}else{S.target=a;S.targetName=file.name;}
+   clearFit(); updatePairStatus(); redraw();
+   setStatus("Loaded "+file.name+". Supply both aligned images, then Seek EQ.");
+  };
+  img.onerror=function(){setStatus("Could not decode this image.");};
+  img.src=ev.target.result;
+ };
+ reader.readAsDataURL(file);
+}
+function setStatus(t){el("status").textContent=t;}
+function stop(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
+function clearFit(){S.prep=null;S.fit=null;S.position=0;el("transferStatus").textContent="No transfer test yet.";}
+function getCurrentCurve(){return S.fit?S.fit.history[S.position].gains:Array(10).fill(1);}
+function resizeCanvas(canvas){canvas.width=N;canvas.height=N;}
+function imagePaint(id,data,residue){
+ var c=el(id);if(!data)return;c.width=c.height=N;
+ var ctx=c.getContext("2d"),p=ctx.createImageData(N,N);
+ var scale=1;
+ if(residue){var m=0;for(var j=0;j<data.length;j++)m=Math.max(m,Math.abs(data[j]));scale=Math.max(m,0.005);}
+ for(var i=0;i<data.length;i++){
+  var d=data[i],r,g,b;
+  if(!residue){var n=Math.round(Math.max(0,Math.min(1,d+.5))*255);r=g=b=n;}
+  else{var t=Math.min(1,Math.abs(d)/scale);if(d>=0){r=28+225*t;g=29+130*(1-t);b=54+85*(1-t);}else{r=25+80*(1-t);g=44+130*(1-t);b=54+202*t;}}
+  var q=4*i;p.data[q]=r;p.data[q+1]=g;p.data[q+2]=b;p.data[q+3]=255;
+ }
+ ctx.putImageData(p,0,0);
+}
+function drawEq(curve){
+ var c=el("eqChart"),ctx=c.getContext("2d"),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#071726";ctx.fillRect(0,0,w,h);
+ var padL=42,padR=14,padT=17,padB=30, gw=w-padL-padR, gh=h-padT-padB;
+ for(var k=0;k<=5;k++){var yy=padT+gh*k/5;ctx.strokeStyle="#274055";ctx.beginPath();ctx.moveTo(padL,yy);ctx.lineTo(w-padR,yy);ctx.stroke();ctx.fillStyle="#9bb0c5";ctx.font="12px monospace";ctx.fillText((1-k/5).toFixed(1),4,yy+4);}
+ for(var i=0;i<10;i++){var xx=padL+gw*i/9;ctx.strokeStyle="#1e3247";ctx.beginPath();ctx.moveTo(xx,padT);ctx.lineTo(xx,padT+gh);ctx.stroke();}
+ if(S.fit){for(var z=0;z<10;z++){if(!S.fit.known[z]){ctx.fillStyle="#adbac017";ctx.fillRect(padL+gw*(z-.45)/9,padT,gw*.9/9,gh);}}}
+ function plot(vals,color,thick){
+  ctx.strokeStyle=color;ctx.lineWidth=thick;ctx.beginPath();
+  for(var m=0;m<=255;m++){var x=padL+gw*m/255,y=padT+(1-E.gainAt(m,vals))*gh;if(!m)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
+  ctx.stroke();
+  for(var z=0;z<10;z++){ctx.fillStyle=color;ctx.beginPath();ctx.arc(padL+gw*z/9,padT+(1-vals[z])*gh,4,0,2*Math.PI);ctx.fill();}
+ }
+ if(S.revealed&&S.truth)plot(S.truth,"#f6be69",3);
+ plot(curve,"#5ee1bd",3);
+ ctx.fillStyle="#a1b9cb";ctx.font="12px monospace";
+ ctx.fillText("low k²",padL,h-9);ctx.fillText("Nyquist corner",w-124,h-9);
+}
+function drawSupport(){
+ var c=el("supportChart"),ctx=c.getContext("2d"),w=c.width,h=c.height;
+ ctx.clearRect(0,0,w,h);ctx.fillStyle="#071726";ctx.fillRect(0,0,w,h);
+ for(var i=0;i<10;i++){
+  var conf=S.prep?S.prep.confidence[i]:0;
+  var full=conf>=.0006, bar=4+Math.min(1,Math.sqrt(conf))*82;
+  var x=25+i*(w-45)/10;
+  ctx.fillStyle=full?"#317d83":"#76505c";ctx.fillRect(x,h-28-bar,(w-55)/10-9,bar);
+  ctx.fillStyle="#bbd0e0";ctx.font="13px monospace";ctx.fillText(String(i+1),x+6,h-10);
+ }
+ ctx.fillStyle="#93acbe";ctx.font="12px monospace";ctx.fillText("evidence ∝ spectral energy (relative display)",14,17);
+}
+function redraw(){
+ if(!S.source||!S.target)return;
+ var curve=getCurrentCurve(), predicted=E.forward(S.source,N,curve,S.passes,S.alpha);
+ var residue=new Float64Array(N*N);
+ for(var i=0;i<residue.length;i++)residue[i]=S.target[i]-predicted[i];
+ imagePaint("sourceCanvas",S.source,false);
+ imagePaint("targetCanvas",S.target,false);
+ imagePaint("replayCanvas",predicted,false);
+ imagePaint("residueCanvas",residue,true);
+ var initial=E.rmse(S.source,S.target), current=E.rmse(predicted,S.target);
+ el("initialErr").textContent=initial.toFixed(4);
+ el("currentErr").textContent=current.toFixed(4);
+ el("explained").textContent=initial>1e-10?Math.round(100*(1-current/initial))+"%":(current<1e-8?"100%":"—");
+ el("heldout").textContent=S.fit?S.fit.history[S.position].holdout.toFixed(4):"—";
+ drawEq(curve);drawSupport();
+ var log=el("trace");
+ if(!S.fit){log.textContent="No probes yet. The null rule says: B = A.";el("audit").textContent="Unknown EQ. Try Seek EQ to test whether the difference fits the Sigh filter family.";return;}
+ var history=S.fit.history;
+ var lines=["Probe "+S.position+" / "+(history.length-1),"0: identity filter, gain 1 everywhere"];
+ for(var q=1;q<=S.position;q++){
+  var step=history[q];lines.push(q+": band "+(step.band+1)+" -> "+step.gains[step.band].toFixed(3)+" | held-out "+step.holdout.toFixed(4));
+ }
+ log.textContent=lines.slice(-15).join("\n");log.scrollTop=log.scrollHeight;
+ var more="Fourier bins used: "+S.prep.used+"; low-energy bins excluded: "+S.prep.ignored+". ";
+ if(S.prep.clipped>0)more+=S.prep.clipped+" bins had effective gains outside [0,1] (model mismatch or noise). ";
+ if(S.fit.known.some(function(x){return !x;}))more+="Some bands have almost no source evidence: their gains are not identifiable. ";
+ more+="Held-out error measures fit to withheld frequencies, NOT transfer to an independent image.";
+ el("audit").textContent=more;
+}
+function updatePairStatus(){el("pairStatus").textContent=S.synthetic?"Built-in mystery pair. Hidden rule generated in floating point.":S.sourceName+" → "+S.targetName+" (imported, center-cropped to 128×128)";}
+function makeDemo(){
+ stop();S.synthetic=true;S.revealed=false;S.truth=mysteryCurves[+el("mystery").value].slice();
+ S.source=makeSpecimen(0);
+ S.target=E.forward(S.source,N,S.truth,S.passes,S.alpha);
+ S.sourceName="Built-in specimen";S.targetName="Mystery filtered";
+ clearFit();updatePairStatus();redraw();setStatus("Mystery generated. Now tell the seeker to investigate.");
+}
+function assureFit(){
+ if(!S.source||!S.target){setStatus("Load an original and its transformed image.");return false;}
+ if(!S.fit){
+  S.prep=E.prepare(S.source,S.target,N,S.passes,S.alpha);
+  S.fit=E.greedy(S.prep,72);S.position=0;redraw();
+ }
+ return true;
+}
+function tick(){
+ if(!assureFit())return;
+ if(S.position>=S.fit.history.length-1){stop();setStatus("Finished: "+S.position+" probes. Compare the residue and held-out error.");return;}
+ S.position++;redraw();setStatus("Probe "+S.position+" / "+(S.fit.history.length-1)+" — the residue chose band "+(S.fit.history[S.position].band+1));
+ if(S.position>=S.fit.history.length-1){stop();setStatus("Search complete. Test transfer to a new image.");}
+}
+function changeAssumptions(){
+ stop();S.passes=+el("passes").value;S.alpha=+el("alpha").value;
+ el("passesVal").textContent=S.passes;el("alphaVal").textContent=S.alpha.toFixed(3);
+ if(S.synthetic){S.target=E.forward(S.source,N,S.truth,S.passes,S.alpha);}
+ clearFit();redraw();setStatus(S.synthetic?"Mystery regenerated at new settings.":"New assumptions; seek EQ again.");
+}
+el("makeDemo").onclick=makeDemo;
+el("mystery").onchange=makeDemo;
+el("reveal").onclick=function(){if(!S.synthetic||!S.truth){setStatus("Only the built-in mystery has a known hidden answer.");return;}S.revealed=!S.revealed;el("reveal").textContent=S.revealed?"Hide answer":"Reveal hidden EQ";drawEq(getCurrentCurve());};
+el("beforeFile").onchange=function(e){loadImage(e.target.files[0],"source");};
+el("afterFile").onchange=function(e){loadImage(e.target.files[0],"target");};
+el("passes").oninput=changeAssumptions;
+el("alpha").oninput=changeAssumptions;
+el("step").onclick=function(){stop();tick();};
+el("seek").onclick=function(){if(!assureFit())return;stop();S.timer=setInterval(tick,90);tick();};
+el("finish").onclick=function(){if(!assureFit())return;stop();S.position=S.fit.history.length-1;redraw();setStatus("Finished "+S.position+" probes. Check the reconstruction.");};
+el("reset").onclick=function(){stop();clearFit();redraw();setStatus("Reset. The seeker knows nothing again.");};
+el("transfer").onclick=function(){
+ if(!assureFit())return;
+ if(!S.synthetic||!S.truth){el("transferStatus").textContent="Transfer requires a known hidden rule. For your own pair, capture a second independent before/after pair.";return;}
+ var fresh=makeSpecimen(1),gold=E.forward(fresh,N,S.truth,S.passes,S.alpha),guess=E.forward(fresh,N,getCurrentCurve(),S.passes,S.alpha);
+ var err=E.rmse(gold,guess),base=E.rmse(fresh,gold);
+ el("transferStatus").textContent="Independent second picture: RMSE "+err.toFixed(5)+" vs unchanged baseline "+base.toFixed(5)+". "+(base?((1-err/base)*100).toFixed(1)+"% difference explained.":"");
+};
+el("download").onclick=function(){
+ var curve=getCurrentCurve(),pred=E.forward(S.source,N,curve,S.passes,S.alpha);
+ imagePaint("replayCanvas",pred,false);
+ var a=document.createElement("a");a.download="sigh-image-inverse-replay.png";a.href=el("replayCanvas").toDataURL("image/png");a.click();
+};
+makeDemo();
+})();
+</script>
+</body>
+</html>
