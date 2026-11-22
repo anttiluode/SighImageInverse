@@ -68,11 +68,13 @@ button.primary{background:#167b71;border-color:#39b6a4;color:white}button.primar
  <aside class="panel controls">
   <div class="tag">01 / Make or load evidence</div>
   <p class="small" style="margin-top:12px">Try a hidden filter, or load aligned <b>before</b> and <b>after</b> images from your own Sigh loop. Everything runs locally in your browser.</p>
-  <div class="field"><label for="mystery">Hidden EQ for built-in experiment</label><select id="mystery"><option value="0">Mystery A — unexpected law</option><option value="1">Mystery B — another law</option><option value="2">Mystery C — another law</option></select></div>
+  <div class="field"><label for="mystery">Hidden EQ for built-in experiment</label><select id="mystery"><option value="0">Mystery A — band-pass (start here)</option><option value="1">Mystery B — face disappears (high-pass)</option><option value="2">Mystery C — low-pass / missing detail</option></select></div>
   <div class="buttonrow"><button id="makeDemo">Generate transformed picture</button><button class="secondary" id="reveal">Reveal hidden EQ</button></div>
   <div class="buttonrow"><label class="file-button" for="beforeFile">Load original</label><input id="beforeFile" type="file" accept="image/*"><label class="file-button" for="afterFile">Load changed</label><input id="afterFile" type="file" accept="image/*"></div>
   <p id="pairStatus" class="small">Built-in synthetic pair; original 128 × 128 sample.</p>
-  <div class="field"><label for="passes">Number of Sigh passes <strong id="passesVal">4</strong></label><input id="passes" type="range" min="1" max="18" value="4" step="1"></div>
+  <div class="field"><label for="viewMode">Image display mode</label><select id="viewMode"><option value="enhanced">Enhance faint signals equally in B and replay</option><option value="faithful">Faithful brightness — no amplification</option></select></div>
+  <p class="small" id="boostStatus">Display enhancement only, never changes the mathematics.</p>
+  <div class="field"><label for="passes">Number of Sigh passes <strong id="passesVal">2</strong></label><input id="passes" type="range" min="1" max="18" value="2" step="1"></div>
   <div class="field"><label for="alpha">Fresh-image feedback α <strong id="alphaVal">0.000</strong></label><input id="alpha" type="range" min="0" max="0.6" value="0" step="0.025"></div>
   <p class="small">For uploaded pairs these are <b>assumptions you supply</b>. A single before/after pair cannot generally identify the EQ, pass count and α independently.</p>
   <hr style="border:0;border-top:1px solid var(--line);margin:16px 0">
@@ -89,14 +91,15 @@ button.primary{background:#167b71;border-color:#39b6a4;color:white}button.primar
    <div class="tile"><div class="top"><span>INPUT · before</span><span style="color:var(--teal)">A</span></div><canvas id="sourceCanvas" width="128" height="128"></canvas><div class="hint">Original image / source of probes</div></div>
    <div class="tile"><div class="top"><span>OUTPUT · after</span><span style="color:var(--gold)">B</span></div><canvas id="targetCanvas" width="128" height="128"></canvas><div class="hint">Unknown processing has happened</div></div>
    <div class="tile"><div class="top"><span>REPLAY · A through guessed EQ</span></div><canvas id="replayCanvas" width="128" height="128"></canvas><div class="hint">Prediction after current rule</div></div>
-   <div class="tile"><div class="top"><span>RESIDUE · B − prediction</span><span style="color:var(--red)">Δ</span></div><canvas id="residueCanvas" width="128" height="128"></canvas><div class="hint">Warm = too low, blue = too high</div></div>
+   <div class="tile"><div class="top"><span>RESIDUE · B − prediction</span><span style="color:var(--red)">Δ</span></div><canvas id="residueCanvas" width="128" height="128"></canvas><div class="hint">Dark = matched · red/blue = genuine difference</div></div>
   </div>
   <div class="metrics">
    <div class="metric"><div class="name">Pixels / initial difference</div><div class="value" id="initialErr">—</div></div>
-   <div class="metric highlight"><div class="name">Pixels / current RMSE</div><div class="value" id="currentErr">—</div></div>
+   <div class="metric highlight"><div class="name">Pixels / residual RMSE</div><div class="value" id="currentErr">—</div></div>
    <div class="metric"><div class="name">Difference explained</div><div class="value" id="explained">—</div></div>
-   <div class="metric"><div class="name">Held-out frequencies / fit error</div><div class="value" id="heldout">—</div></div>
+   <div class="metric"><div class="name">Held-out frequency error</div><div class="value" id="heldout">—</div></div>
   </div>
+  <div class="notice" id="survivalMessage" style="margin:0 0 14px">Image signal survival will appear here.</div>
   <div class="panel eqpanel">
    <div>
     <h2>Discovered EQ <span class="small">— exact original Sigh k² convention</span></h2>
@@ -134,7 +137,7 @@ var mysteryCurves=[
  [0.04,0.08,0.15,0.21,0.34,0.51,0.70,0.84,0.96,1.00],
  [1.00,0.96,0.87,0.54,0.16,0.13,0.49,0.85,0.96,0.99]
 ];
-var S={source:null,target:null,truth:null,synthetic:true,revealed:false,prep:null,fit:null,position:0,timer:null,passes:4,alpha:0,sourceName:"Built-in specimen",targetName:"Generated EQ"};
+var S={source:null,target:null,truth:null,synthetic:true,revealed:false,prep:null,fit:null,position:0,timer:null,passes:2,alpha:0,displayEnhanced:true,sourceName:"Built-in specimen",targetName:"Generated EQ"};
 function makeSpecimen(variant){
  var c=document.createElement("canvas");c.width=N;c.height=N;var x=c.getContext("2d");
  var sky=x.createLinearGradient(0,0,N,N);sky.addColorStop(0,"#b3c6cf");sky.addColorStop(.5,"#455e74");sky.addColorStop(1,"#27374e");x.fillStyle=sky;x.fillRect(0,0,N,N);
@@ -198,15 +201,35 @@ function stop(){if(S.timer){clearInterval(S.timer);S.timer=null;}}
 function clearFit(){S.prep=null;S.fit=null;S.position=0;el("transferStatus").textContent="No transfer test yet.";}
 function getCurrentCurve(){return S.fit?S.fit.history[S.position].gains:Array(10).fill(1);}
 function resizeCanvas(canvas){canvas.width=N;canvas.height=N;}
-function imagePaint(id,data,residue){
+function rmsContrast(data){
+ var mean=0,power=0;
+ for(var i=0;i<data.length;i++)mean+=data[i];
+ mean/=data.length;
+ for(var j=0;j<data.length;j++){var diff=data[j]-mean;power+=diff*diff;}
+ return Math.sqrt(power/data.length);
+}
+function formatError(error){
+ if(!Number.isFinite(error))return "—";
+ if(error===0)return "0 exact";
+ return error<.0001?error.toExponential(2):error.toFixed(5);
+}
+function imagePaint(id,data,residue,gain,residueScale){
  var c=el(id);if(!data)return;c.width=c.height=N;
  var ctx=c.getContext("2d"),p=ctx.createImageData(N,N);
- var scale=1;
- if(residue){var m=0;for(var j=0;j<data.length;j++)m=Math.max(m,Math.abs(data[j]));scale=Math.max(m,0.005);}
+ var scale=residueScale||.05;
+ gain=gain||1;
  for(var i=0;i<data.length;i++){
   var d=data[i],r,g,b;
-  if(!residue){var n=Math.round(Math.max(0,Math.min(1,d+.5))*255);r=g=b=n;}
-  else{var t=Math.min(1,Math.abs(d)/scale);if(d>=0){r=28+225*t;g=29+130*(1-t);b=54+85*(1-t);}else{r=25+80*(1-t);g=44+130*(1-t);b=54+202*t;}}
+  if(!residue){
+   var n=Math.round(Math.max(0,Math.min(1,d*gain+.5))*255);
+   r=g=b=n;
+  }else{
+   // A true zero must be dark, not neon green. Never normalize by current
+   // residual maximum: that made a nearly-zero residual look alarming.
+   var t=Math.min(1,Math.abs(d)/scale);
+   if(d>=0){r=24+231*t;g=37+22*t;b=54+38*t;}
+   else{r=24+40*t;g=37+101*t;b=54+201*t;}
+  }
   var q=4*i;p.data[q]=r;p.data[q+1]=g;p.data[q+2]=b;p.data[q+3]=255;
  }
  ctx.putImageData(p,0,0);
@@ -243,25 +266,48 @@ function drawSupport(){
 }
 function redraw(){
  if(!S.source||!S.target)return;
- var curve=getCurrentCurve(), predicted=E.forward(S.source,N,curve,S.passes,S.alpha);
+ var curve=getCurrentCurve(),predicted=E.forward(S.source,N,curve,S.passes,S.alpha);
  var residue=new Float64Array(N*N);
  for(var i=0;i<residue.length;i++)residue[i]=S.target[i]-predicted[i];
- imagePaint("sourceCanvas",S.source,false);
- imagePaint("targetCanvas",S.target,false);
- imagePaint("replayCanvas",predicted,false);
- imagePaint("residueCanvas",residue,true);
- var initial=E.rmse(S.source,S.target), current=E.rmse(predicted,S.target);
- el("initialErr").textContent=initial.toFixed(4);
- el("currentErr").textContent=current.toFixed(4);
- el("explained").textContent=initial>1e-10?Math.round(100*(1-current/initial))+"%":(current<1e-8?"100%":"—");
- el("heldout").textContent=S.fit?S.fit.history[S.position].holdout.toFixed(4):"—";
+ var initial=E.rmse(S.source,S.target),current=E.rmse(predicted,S.target);
+ var sourceContrast=rmsContrast(S.source),targetContrast=rmsContrast(S.target);
+ var gain=S.displayEnhanced?Math.max(1,Math.min(128,sourceContrast/Math.max(targetContrast,1e-12))):1;
+ imagePaint("sourceCanvas",S.source,false,1);
+ imagePaint("targetCanvas",S.target,false,gain);
+ imagePaint("replayCanvas",predicted,false,gain);
+ // Fixed scale tied to the ORIGINAL change, not to the remaining residual.
+ // The residue darkens as the reconstruction improves.
+ imagePaint("residueCanvas",residue,true,1,Math.max(.006,initial*.25));
+ el("initialErr").textContent=formatError(initial);
+ el("currentErr").textContent=formatError(current);
+ el("explained").textContent=initial>1e-10?
+   (current/initial<.000001?">99.9999%":(100*(1-current/initial)).toFixed(3)+"%"):
+   (current<1e-8?"100%":"—");
+ el("heldout").textContent=S.fit?formatError(S.fit.history[S.position].holdout):"—";
+ var pct=sourceContrast>1e-12?100*targetContrast/sourceContrast:0;
+ var faint=pct<5,extreme=pct<.5;
+ el("boostStatus").textContent=gain>1.01?
+  ("Displayed B and replay with the SAME "+gain.toFixed(gain>10?0:1)+"× visual contrast boost. No pixels are restored and the numerical solver uses unboosted values."):
+  "Faithful pixel intensity. No display amplification is applied.";
+ el("survivalMessage").textContent=
+  (extreme?"Almost all visible image information has faded. ":
+    faint?"Most visible structure has faded. ":"Signal remains visibly substantial. ")+
+  "Target has "+pct.toPrecision(3)+"% of the original's RMS contrast after "+S.passes+" pass"+(S.passes===1?"":"es")+". "+
+  (gain>1.01?"Shown at "+gain.toFixed(gain>10?0:1)+"× boosted contrast so you can inspect what survived. ":"")+
+  "A correct filter replay may look blank when the true output is blank. This is not recovery of the missing face.";
  drawEq(curve);drawSupport();
  var log=el("trace");
- if(!S.fit){log.textContent="No probes yet. The null rule says: B = A.";el("audit").textContent="Unknown EQ. Try Seek EQ to test whether the difference fits the Sigh filter family.";return;}
+ if(!S.fit){
+  log.textContent="No probes yet. The null rule says: B = A.";
+  el("audit").textContent="Unknown EQ. Try Seek EQ to test whether the difference fits the Sigh filter family.";
+  return;
+ }
  var history=S.fit.history;
  var lines=["Probe "+S.position+" / "+(history.length-1),"0: identity filter, gain 1 everywhere"];
  for(var q=1;q<=S.position;q++){
-  var step=history[q];lines.push(q+": band "+(step.band+1)+" -> "+step.gains[step.band].toFixed(3)+" | held-out "+step.holdout.toFixed(4));
+  var step=history[q];
+  lines.push(q+": band "+(step.band+1)+" → "+step.gains[step.band].toFixed(5)+
+   " | held-out "+formatError(step.holdout));
  }
  log.textContent=lines.slice(-15).join("\n");log.scrollTop=log.scrollHeight;
  var more="Fourier bins used: "+S.prep.used+"; low-energy bins excluded: "+S.prep.ignored+". ";
@@ -300,6 +346,7 @@ function changeAssumptions(){
 }
 el("makeDemo").onclick=makeDemo;
 el("mystery").onchange=makeDemo;
+el("viewMode").onchange=function(){S.displayEnhanced=el("viewMode").value==="enhanced";redraw();};
 el("reveal").onclick=function(){if(!S.synthetic||!S.truth){setStatus("Only the built-in mystery has a known hidden answer.");return;}S.revealed=!S.revealed;el("reveal").textContent=S.revealed?"Hide answer":"Reveal hidden EQ";drawEq(getCurrentCurve());};
 el("beforeFile").onchange=function(e){loadImage(e.target.files[0],"source");};
 el("afterFile").onchange=function(e){loadImage(e.target.files[0],"target");};
